@@ -2,7 +2,7 @@
 
     // ================== CONFIG ==================
     const ACTIVATION_CODES_URL =
-        "https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/wafid-monitor/main/activation/activation-codes.json";
+        "https://raw.githubusercontent.com/linkwafid-max/wafid-monitor/refs/heads/main/app/app.js";
 
     const TRIAL_KEY = "wafid_trial_info_v1";
     const LICENSE_KEY = "wafid_license_status_v1";
