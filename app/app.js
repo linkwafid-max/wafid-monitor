@@ -196,11 +196,6 @@
             <div style="font-size:13px;margin-bottom:6px;">
                 Server Latency: <b>${latency} ms</b>
             </div>
-
-            <div style="font-size:13px;margin-bottom:6px;">
-                Next Slot Window: <b>${slot}</b>
-            </div>
-
             <div style="font-size:13px;margin-top:12px;">
                 <div>session_key:</div>
                 <div style="background:#021b29;padding:6px;border-radius:6px;font-size:12px;margin-bottom:8px;">
