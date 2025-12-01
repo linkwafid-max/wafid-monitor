@@ -2,10 +2,12 @@
 
     // ================== CONFIG ==================
     const ACTIVATION_CODES_URL =
-        "https://raw.githubusercontent.com/linkwafid-max/wafid-monitor/refs/heads/main/app/app.js";
+        "https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/wafid-monitor/main/activation/activation-codes.json";
 
-    const TRIAL_KEY = "wafid_trial_info_v1";
-    const LICENSE_KEY = "wafid_license_status_v1";
+    const TRIAL_START_KEY   = "wafid_trial_started_at_v1";
+    const TRIAL_EXPIRED_KEY = "wafid_trial_expired_v1";
+    const LICENSE_KEY       = "wafid_license_status_v1";
+
     const TRIAL_DURATION_MS = 60 * 1000; // ১ মিনিট
     // ===========================================
 
@@ -42,53 +44,38 @@
         localStorage.setItem(LICENSE_KEY + "_meta", JSON.stringify(data));
     }
 
-    function getTrialInfo() {
-        const raw = localStorage.getItem(TRIAL_KEY);
+    function hasTrialExpired() {
+        return localStorage.getItem(TRIAL_EXPIRED_KEY) === "1";
+    }
+
+    function markTrialExpired() {
+        localStorage.setItem(TRIAL_EXPIRED_KEY, "1");
+    }
+
+    function getTrialStart() {
+        const raw = localStorage.getItem(TRIAL_START_KEY);
         if (!raw) return null;
-        try {
-            return JSON.parse(raw);
-        } catch (e) {
-            return null;
-        }
+        const t = parseInt(raw, 10);
+        return isNaN(t) ? null : t;
     }
 
-    function startTrialIfNeeded() {
-        let info = getTrialInfo();
-        if (!info) {
-            info = {
-                startedAt: Date.now(),
-                everExpired: false
-            };
-            localStorage.setItem(TRIAL_KEY, JSON.stringify(info));
+    function ensureTrialStart() {
+        let start = getTrialStart();
+        if (!start) {
+            start = Date.now();
+            localStorage.setItem(TRIAL_START_KEY, String(start));
         }
-        return info;
-    }
-
-    function isTrialActive() {
-        const info = getTrialInfo();
-        if (!info) return false;
-        const elapsed = Date.now() - info.startedAt;
-        if (elapsed < TRIAL_DURATION_MS && !info.everExpired) {
-            return true;
-        } else {
-            // mark expired (one time only)
-            if (!info.everExpired) {
-                info.everExpired = true;
-                localStorage.setItem(TRIAL_KEY, JSON.stringify(info));
-            }
-            return false;
-        }
+        return start;
     }
 
     function secondsLeftInTrial() {
-        const info = getTrialInfo();
-        if (!info) return 0;
-        const elapsed = Date.now() - info.startedAt;
+        const start = getTrialStart();
+        if (!start) return 0;
+        const elapsed = Date.now() - start;
         const remain = TRIAL_DURATION_MS - elapsed;
         return remain > 0 ? Math.ceil(remain / 1000) : 0;
     }
 
-    // GitHub থেকে activation-codes.json ফেচ করে চেক করার ফাংশন
     async function validateActivationCode(code) {
         try {
             const res = await fetch(ACTIVATION_CODES_URL + "?_=" + Date.now()); // cache bust
@@ -150,19 +137,23 @@
         "Akota Diagnostic Center"
     ];
 
-    function renderMainCenter(center, modeInfo) {
+    function renderMainCenter(center, mode) {
+        // mode = "licensed" | "trial"
         const session = genTok(30);
-        const token = genTok(45);
-        const hash = genHex(36);
-        const load = Math.floor(Math.random() * 100);
-        const slot = `${Math.floor(Math.random() * 12) + 1}:${Math.floor(Math.random() * 59)
+        const token   = genTok(45);
+        const hash    = genHex(36);
+        const load    = Math.floor(Math.random() * 100);
+        const slot    = `${Math.floor(Math.random() * 12) + 1}:${Math.floor(Math.random() * 59)
             .toString().padStart(2, "0")} PM`;
         const latency = Math.floor(Math.random() * 300) + 80;
 
-        const modeLabel = modeInfo.mode === "trial" ? "Trial Mode · " : "Licensed · ";
-        const extra = modeInfo.mode === "trial"
-            ? `Trial time left: ${modeInfo.left}s`
-            : `Activation: OK`;
+        const isTrial = mode === "trial";
+        const leftSec = isTrial ? secondsLeftInTrial() : null;
+
+        const modeLabel = isTrial ? "Trial Mode · 1 minute limit" : "Licensed · Full Access";
+        const extra = isTrial
+            ? `Free trial running. Time left: <span id="___trial_left">${leftSec}</span>s`
+            : `Activation: OK · Unlimited usage on this browser`;
 
         panel.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
@@ -179,10 +170,10 @@
             </div>
 
             <div style="font-size:13px;margin-bottom:8px;color:#8bd6e6;">
-                ${modeLabel} Live Status Mirror · Passive DB Feed
+                ${modeLabel} · Live Status Mirror · Passive DB Feed
             </div>
 
-            <div style="font-size:12px;margin-bottom:10px;color:#79e2c4;">
+            <div style="font-size:12px;margin-bottom:10px;color:${isTrial ? "#ffcb77" : "#79e2c4"};">
                 ${extra}
             </div>
 
@@ -244,7 +235,7 @@
         panel.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                 <div style="font-size:17px;font-weight:700;">
-                    Access Restricted
+                    Trial Expired
                 </div>
                 <button id="___wafid_close" style="
                     background:transparent;
@@ -256,12 +247,12 @@
             </div>
 
             <div style="font-size:13px;margin-bottom:10px;color:#ff9f9f;">
-                Your free 1-minute trial has expired on this browser.
+                Your free 1-minute trial for this browser has expired.
             </div>
 
             <div style="font-size:13px;margin-bottom:10px;color:#8bd6e6;">
-                To continue using the system, please pay with <b>USDT (TRC20)</b> and then
-                activate using your activation code.
+                To continue using the system on this browser, please pay with
+                <b>USDT (TRC20)</b> and then activate using your activation code.
             </div>
 
             <div style="font-size:12px;margin-bottom:10px;">
@@ -323,34 +314,55 @@
         `;
     }
 
-    // ---------- Rotation Logic (runs only if licensed OR trial active) ----------
+    // ---------- Rotation + Trial Timer Logic ----------
 
     let rotateTimer = null;
+    let trialTimer  = null;
+    let currentMode = null; // "licensed" | "trial"
 
-    function startRotation(modeInfo) {
-        // প্রথমে একবারই সেন্টার রেন্ডার করি
+    function stopRotation() {
+        if (rotateTimer) {
+            clearTimeout(rotateTimer);
+            rotateTimer = null;
+        }
+    }
+
+    function startRotation(mode) {
+        currentMode = mode;
+
         function step() {
-            const center = centers[Math.floor(Math.random() * centers.length)];
-
-            let mInfo = modeInfo;
-            if (modeInfo.mode === "trial") {
-                const left = secondsLeftInTrial();
-                if (left <= 0) {
-                    clearTimeout(rotateTimer);
-                    rotateTimer = null;
-                    renderTrialExpired();
-                    return;
-                }
-                mInfo = { mode: "trial", left };
+            if (currentMode === "trial" && hasTrialExpired()) {
+                stopRotation();
+                renderTrialExpired();
+                return;
             }
 
-            renderMainCenter(center, mInfo);
+            const center = centers[Math.floor(Math.random() * centers.length)];
+            renderMainCenter(center, currentMode);
 
-            const next = Math.floor(Math.random() * 8000) + 5000;
+            const next = Math.floor(Math.random() * 4000) + 3000; // ৩–৭ সেকেন্ড
             rotateTimer = setTimeout(step, next);
         }
 
         step();
+    }
+
+    function startTrialCountdown() {
+        if (trialTimer) clearInterval(trialTimer);
+
+        trialTimer = setInterval(() => {
+            const left = secondsLeftInTrial();
+            const span = document.getElementById("___trial_left");
+            if (span) span.textContent = String(left);
+
+            if (left <= 0) {
+                clearInterval(trialTimer);
+                trialTimer = null;
+                markTrialExpired();
+                stopRotation();
+                renderTrialExpired();
+            }
+        }, 1000);
     }
 
     // ---------- Activation flow ----------
@@ -363,8 +375,13 @@
         const ok = await validateActivationCode(code.trim());
         if (ok) {
             setLicenseActive(code.trim());
-            const modeInfo = { mode: "licensed" };
-            startRotation(modeInfo);
+            markTrialExpired(); // লাইসেন্স হলে আর ট্রায়াল দরকার নেই
+            if (trialTimer) {
+                clearInterval(trialTimer);
+                trialTimer = null;
+            }
+            stopRotation();
+            startRotation("licensed");
         } else {
             renderActivationFailed("Invalid or unknown activation code.");
         }
@@ -383,21 +400,31 @@
     (function init() {
         const status = getLicenseStatus();
         if (status === "active") {
-            // Already licensed
-            startRotation({ mode: "licensed" });
+            // ইতিমধ্যেই লাইসেন্স আছে
+            startRotation("licensed");
             return;
         }
 
-        // Trial হিসেব শুরু করতে হবে
-        const info = startTrialIfNeeded();
-
-        if (isTrialActive()) {
-            const left = secondsLeftInTrial();
-            startRotation({ mode: "trial", left });
-        } else {
-            // ট্রায়াল এক্সপায়ার্ড
+        // লাইসেন্স নাই -> ট্রায়াল চেক
+        if (hasTrialExpired()) {
+            // আগে একবার trial শেষ হয়েছে => এই ব্রাউজারে আর ফ্রি ট্রায়াল না
             renderTrialExpired();
+            return;
         }
+
+        // নতুন বা চলমান trial
+        ensureTrialStart();
+        const left = secondsLeftInTrial();
+        if (left <= 0) {
+            // সময় শেষ হয়ে গেছে, এক্সপায়ার্ড মার্ক করে দেই
+            markTrialExpired();
+            renderTrialExpired();
+            return;
+        }
+
+        // Trial শুরু বা চালিয়ে যাচ্ছে
+        startRotation("trial");
+        startTrialCountdown();
     })();
 
 })();
