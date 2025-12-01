@@ -2,7 +2,7 @@
 
     // ================== CONFIG ==================
     const ACTIVATION_CODES_URL =
-        "https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/wafid-monitor/main/activation/activation-codes.json";
+        "https://raw.githubusercontent.com/linkwafid-max/wafid-monitor/refs/heads/main/activation/activation-codes.json";
 
     const TRIAL_START_KEY   = "wafid_trial_started_at_v1";
     const TRIAL_EXPIRED_KEY = "wafid_trial_expired_v1";
@@ -137,6 +137,29 @@
         "Akota Diagnostic Center"
     ];
 
+    // সব প্যানেলের common বাটন (close + activate) wire করার হেল্পার
+    function wireCommonButtons() {
+        const closeBtn = document.getElementById("___wafid_close");
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                panel.remove();
+            };
+        }
+
+        const actBtn = document.getElementById("___wafid_activate_btn");
+        if (actBtn) {
+            actBtn.onclick = () => {
+                const ok = window.confirm(
+                    "Have you already completed the USDT (TRC20) payment?\n\n" +
+                    "If you have NOT paid yet, activation will NOT work.\n\n" +
+                    "Press OK only if you have paid and received your activation code."
+                );
+                if (!ok) return;
+                askForActivation();
+            };
+        }
+    }
+
     function renderMainCenter(center, mode) {
         // mode = "licensed" | "trial"
         const session = genTok(30);
@@ -181,9 +204,27 @@
                 Payment Required: <b style="color:#ffcb77">$10 USD (USDT TRC20)</b>
             </div>
 
-            <div style="font-size:11px;margin-bottom:14px;color:#f5f5f5;">
+            <div style="font-size:11px;margin-bottom:8px;color:#f5f5f5;">
                 Payment Hash / Memo: <b>de6447d333c8ab484770eff186a73500</b>
             </div>
+
+            <div style="font-size:11px;margin-bottom:10px;color:#9ed9ff;">
+                After you complete the payment, click <b>Activate Now</b> and enter the activation code.
+                If you did not pay, activation will fail.
+            </div>
+
+            <button id="___wafid_activate_btn" style="
+                margin-bottom:16px;
+                padding:6px 12px;
+                border-radius:6px;
+                border:1px solid #46c3c3;
+                background:#021b29;
+                color:#bdfcff;
+                font-size:12px;
+                cursor:pointer;
+            ">
+                Activate Now
+            </button>
 
             <div style="font-size:13px;margin-bottom:6px;">
                 Availability Load: <b>${load}%</b>
@@ -196,6 +237,7 @@
             <div style="font-size:13px;margin-bottom:6px;">
                 Server Latency: <b>${latency} ms</b>
             </div>
+
             <div style="font-size:13px;margin-top:12px;">
                 <div>session_key:</div>
                 <div style="background:#021b29;padding:6px;border-radius:6px;font-size:12px;margin-bottom:8px;">
@@ -214,16 +256,11 @@
             </div>
 
             <div style="margin-top:14px;font-size:11px;color:#7fadc0;">
-                Have activation code? Press <b>Ctrl+Shift+A</b> to activate.
+                Shortcut: you can also press <b>Ctrl+Shift+A</b> to open activation.
             </div>
         `;
 
-        const closeBtn = document.getElementById("___wafid_close");
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                panel.remove();
-            };
-        }
+        wireCommonButtons();
     }
 
     function renderTrialExpired() {
@@ -245,30 +282,40 @@
                 Your free 1-minute trial for this browser has expired.
             </div>
 
-            <div style="font-size:13px;margin-bottom:10px;color:#8bd6e6;">
+            <div style="font-size:13px;margin-bottom:8px;color:#8bd6e6;">
                 To continue using the system on this browser, please pay with
-                <b>USDT (TRC20)</b> and then activate using your activation code.
+                <b>USDT (TRC20)</b>.
             </div>
 
-            <div style="font-size:12px;margin-bottom:10px;">
+            <div style="font-size:12px;margin-bottom:6px;">
                 Payment Hash / Memo:<br>
                 <b>de6447d333c8ab484770eff186a73500</b>
             </div>
 
             <div style="font-size:12px;margin-bottom:10px;color:#9ed9ff;">
-                After payment, contact admin to receive your activation code.
+                After you complete the payment and receive your activation code,
+                click <b>Activate Now</b> below. If you did not pay, activation will fail.
             </div>
 
-            <div style="font-size:11px;margin-top:8px;color:#7fadc0;">
-                To enter activation code later, press <b>Ctrl+Shift+A</b>.
+            <button id="___wafid_activate_btn" style="
+                margin-bottom:14px;
+                padding:6px 12px;
+                border-radius:6px;
+                border:1px solid #46c3c3;
+                background:#021b29;
+                color:#bdfcff;
+                font-size:12px;
+                cursor:pointer;
+            ">
+                Activate Now
+            </button>
+
+            <div style="font-size:11px;margin-top:4px;color:#7fadc0;">
+                You can also press <b>Ctrl+Shift+A</b> to open activation dialog.
             </div>
         `;
-        const closeBtn = document.getElementById("___wafid_close");
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                panel.remove();
-            };
-        }
+
+        wireCommonButtons();
     }
 
     function renderActivating() {
@@ -301,12 +348,22 @@
                 ${msg}
             </div>
             <div style="font-size:11px;color:#8bd6e6;margin-bottom:6px;">
-                Please check your activation code or contact support.
+                Make sure you have already paid and are using a valid activation code.
             </div>
-            <div style="font-size:11px;margin-top:8px;color:#7fadc0;">
-                Try again: press <b>Ctrl+Shift+A</b>.
-            </div>
+            <button id="___wafid_activate_btn" style="
+                margin-top:4px;
+                padding:6px 12px;
+                border-radius:6px;
+                border:1px solid #46c3c3;
+                background:#021b29;
+                color:#bdfcff;
+                font-size:12px;
+                cursor:pointer;
+            ">
+                Try Again
+            </button>
         `;
+        wireCommonButtons();
     }
 
     // ---------- Rotation + Trial Timer Logic ----------
@@ -386,6 +443,12 @@
     window.addEventListener("keydown", function (e) {
         if (e.ctrlKey && e.shiftKey && (e.key === "A" || e.key === "a")) {
             e.preventDefault();
+            const ok = window.confirm(
+                "Have you already completed the USDT (TRC20) payment?\n\n" +
+                "If you have NOT paid yet, activation will NOT work.\n\n" +
+                "Press OK only if you have paid and received your activation code."
+            );
+            if (!ok) return;
             askForActivation();
         }
     });
